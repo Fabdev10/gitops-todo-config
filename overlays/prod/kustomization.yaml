@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: todo-app
+
+# Replicas setup for production environment
+replicas:
+  - name: todo-frontend
+    count: 3
+  - name: todo-backend
+    count: 3
+  - name: postgres-db
+    count: 1
+
+# Overwrite images to use the specific build tag
+images:
+  - name: ghcr.io/fabdev10/todo-frontend
+    newName: ghcr.io/fabdev10/todo-frontend
+    newTag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  - name: ghcr.io/fabdev10/todo-backend
+    newName: ghcr.io/fabdev10/todo-backend
+    newTag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0

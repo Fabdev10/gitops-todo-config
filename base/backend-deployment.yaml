@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+      - name: backend
+        image: ghcr.io/fabdev10/todo-backend
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_PORT
+        - name: DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_NAME
+        - name: DB_USER
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_USER
+        - name: DB_PASSWORD
+          value: "postgrespass" # To be moved to Secret later
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: PORT
+        ports:
+        - containerPort: 5000
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /api/todos # or /health or root depends on backend. Let's do httpGet or port check.
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /api/todos
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
