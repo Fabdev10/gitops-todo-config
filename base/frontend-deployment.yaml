@@ -16,17 +16,17 @@ spec:
       - name: frontend
         image: ghcr.io/fabdev10/todo-frontend
         ports:
-        - containerPort: 8080
+        - containerPort: 80
           name: http
         readinessProbe:
           httpGet:
             path: /
-            port: 8080
+            port: 80
           initialDelaySeconds: 3
           periodSeconds: 10
         livenessProbe:
           httpGet:
             path: /
-            port: 8080
+            port: 80
           initialDelaySeconds: 10
           periodSeconds: 20
