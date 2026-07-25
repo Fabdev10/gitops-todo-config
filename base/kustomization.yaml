@@ -5,6 +5,7 @@ resources:
   - configmap.yaml
   - service-accounts.yaml
   - rbac.yaml
+  - network-policies.yaml
   - postgres-statefulset.yaml
   - postgres-service.yaml
   - backend-deployment.yaml

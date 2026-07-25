@@ -1,0 +1,61 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-allow-backend
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres-db
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: todo-backend
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-allow-frontend
+spec:
+  podSelector:
+    matchLabels:
+      app: todo-backend
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: todo-frontend
+    ports:
+    - protocol: TCP
+      port: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-allow-external
+spec:
+  podSelector:
+    matchLabels:
+      app: todo-frontend
+  policyTypes:
+  - Ingress
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 80
