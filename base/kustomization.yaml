@@ -3,7 +3,7 @@ kind: Kustomization
 
 resources:
   - configmap.yaml
-  - postgres-deployment.yaml
+  - postgres-statefulset.yaml
   - postgres-service.yaml
   - backend-deployment.yaml
   - backend-service.yaml
