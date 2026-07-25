@@ -12,6 +12,7 @@ spec:
       labels:
         app: todo-backend
     spec:
+      serviceAccountName: todo-backend
       containers:
       - name: backend
         image: ghcr.io/fabdev10/todo-backend
