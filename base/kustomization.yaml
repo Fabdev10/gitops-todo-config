@@ -12,4 +12,5 @@ resources:
   - backend-service.yaml
   - frontend-deployment.yaml
   - frontend-service.yaml
+  - cluster-issuer-selfsigned.yaml
   - ingress.yaml

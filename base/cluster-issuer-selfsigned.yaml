@@ -1,0 +1,12 @@
+# ClusterIssuer di tipo selfSigned per ambienti homelab/dev senza dominio pubblico.
+# Cluster-scoped: non appartiene a nessun namespace specifico.
+#
+# NOTA per migrazione futura a Let's Encrypt (ACME):
+# Sostituire questo file con un ClusterIssuer di tipo "acme" con solver http01 o dns01.
+# Il manifest Ingress e il secretName "todo-tls" restano invariati.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
