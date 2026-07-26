@@ -5,8 +5,17 @@ metadata:
   annotations:
     # We do not use rewrite-target because the backend already handles the /api prefix natively (e.g. /api/todos)
     kubernetes.io/ingress.class: "nginx"
+    # cert-manager legge questa annotazione e crea automaticamente un oggetto
+    # Certificate + il Secret "todo-tls" firmato dal ClusterIssuer selfsigned-issuer
+    cert-manager.io/cluster-issuer: "selfsigned-issuer"
 spec:
   ingressClassName: nginx
+  tls:
+  - hosts:
+    - todo.local
+    # Nome del Secret che cert-manager creerà nel namespace todo-app
+    # contenente tls.crt e tls.key generati dal ClusterIssuer selfSigned
+    secretName: todo-tls
   rules:
   - host: todo.local
     http:
