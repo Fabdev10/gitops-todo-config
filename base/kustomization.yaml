@@ -15,3 +15,5 @@ resources:
   - frontend-service.yaml
   - cluster-issuer-selfsigned.yaml
   - ingress.yaml
+  - postgres-backup-pvc.yaml
+  - postgres-backup-cronjob.yaml
