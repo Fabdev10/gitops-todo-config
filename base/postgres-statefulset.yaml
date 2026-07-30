@@ -28,7 +28,10 @@ spec:
               name: todo-config
               key: DB_USER
         - name: POSTGRES_PASSWORD
-          value: "postgrespass" # To be moved to Secret later
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
         ports:
         - containerPort: 5432
           name: postgres
