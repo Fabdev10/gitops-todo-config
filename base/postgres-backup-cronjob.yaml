@@ -48,9 +48,10 @@ spec:
             - /bin/sh
             - -c
             - |
-              set -e
+              set -eo pipefail
               echo "Starting database dump..."
-              pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" | gzip > /backups/backup_$(date +%Y%m%d_%H%M%S).sql.gz
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" | gzip > "/backups/backup_${TIMESTAMP}.sql.gz"
               echo "Database dump completed. Cleaning up backups older than 7 days..."
               find /backups -type f -name "backup_*.sql.gz" -mtime +7 -delete
               echo "Cleanup completed successfully."
