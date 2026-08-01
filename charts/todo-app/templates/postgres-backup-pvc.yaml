@@ -1,0 +1,15 @@
+{{- if .Values.backup.cronjob.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-backup-pvc
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.backup.cronjob.storageClassName | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.cronjob.storageSize | quote }}
+{{- end }}

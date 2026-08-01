@@ -1,0 +1,42 @@
+# FASE 2 — Values per ambiente dev
+global:
+  environment: dev
+
+frontend:
+  replicaCount: 1
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources: {}
+
+backend:
+  replicaCount: 1
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+hpa:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 70
+
+ingress:
+  enabled: true
+  host: dev.todo.local
+  tls:
+    enabled: true
+    secretName: dev-todo-tls
+    clusterIssuer: selfsigned-issuer
+
+networkPolicy:
+  enabled: false
+
+backup:
+  cronjob:
+    enabled: false

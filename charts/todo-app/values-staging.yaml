@@ -1,0 +1,51 @@
+# FASE 2 — Values per ambiente staging
+global:
+  environment: staging
+
+frontend:
+  replicaCount: 2
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+backend:
+  replicaCount: 2
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 60
+
+ingress:
+  enabled: true
+  host: staging.todo.local
+  tls:
+    enabled: true
+    secretName: staging-todo-tls
+    clusterIssuer: selfsigned-issuer
+
+networkPolicy:
+  enabled: true
+
+backup:
+  cronjob:
+    enabled: true
+    schedule: "0 3 * * *"
+    storageClassName: local-path
+    storageSize: 2Gi

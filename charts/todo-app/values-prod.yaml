@@ -1,0 +1,51 @@
+# FASE 2 — Values per ambiente production
+global:
+  environment: prod
+
+frontend:
+  replicaCount: 3
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 400m
+      memory: 256Mi
+
+backend:
+  replicaCount: 3
+  image:
+    tag: sha-15c6e5431dc4a4966f43f790ee487c3c18206df0
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 800m
+      memory: 512Mi
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+
+ingress:
+  enabled: true
+  host: todo.local
+  tls:
+    enabled: true
+    secretName: prod-todo-tls
+    clusterIssuer: selfsigned-issuer
+
+networkPolicy:
+  enabled: true
+
+backup:
+  cronjob:
+    enabled: true
+    schedule: "0 2 * * *"
+    storageClassName: local-path
+    storageSize: 5Gi

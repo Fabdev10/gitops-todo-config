@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "todo-app.fullname" . }}-db-migrate"
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    # Helm eseguirà questo Job PRIMA di installare/aggiornare le altre risorse.
+    # Se il Job fallisce, il deploy viene bloccato (rollback automatico in caso di upgrade).
+    "helm.sh/hook": pre-install,pre-upgrade
+    # Un peso negativo garantisce che questo hook parta prima di altri hook allo stesso stadio.
+    "helm.sh/hook-weight": "-5"
+    # Il Job viene eliminato automaticamente dopo il successo (mantiene il cluster pulito).
+    # Usa "hook-failed" per tenerlo in caso di errore e facilitare il debug.
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  # Il Job viene considerato fallito se non completa entro 120 secondi.
+  activeDeadlineSeconds: 120
+  template:
+    metadata:
+      name: "{{ include "todo-app.fullname" . }}-db-migrate"
+      labels:
+        app: db-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: db-migrate
+        image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+        env:
+        - name: PGHOST
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_HOST
+        - name: PGPORT
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_PORT
+        - name: PGDATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_NAME
+        - name: PGUSER
+          valueFrom:
+            configMapKeyRef:
+              name: todo-config
+              key: DB_USER
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
+        command:
+        - /bin/sh
+        - -c
+        - |
+          set -eo pipefail
+          echo "=== DB Migration Hook: verifica connessione a $PGHOST:$PGPORT ==="
+
+          # Attendi che il DB sia pronto (max 60 tentativi, 1 secondo ciascuno)
+          RETRIES=60
+          until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" || [ $RETRIES -eq 0 ]; do
+            echo "Waiting for postgres... ($RETRIES tentativi rimasti)"
+            sleep 1
+            RETRIES=$((RETRIES-1))
+          done
+
+          if [ $RETRIES -eq 0 ]; then
+            echo "ERROR: Postgres non raggiungibile. Aborting migration."
+            exit 1
+          fi
+
+          echo "=== Postgres raggiungibile. Esecuzione migrazione/verifica schema... ==="
+
+          # Esempio: verifica che la tabella 'todos' esista (adatta al tuo schema reale)
+          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c "
+            CREATE TABLE IF NOT EXISTS todos (
+              id SERIAL PRIMARY KEY,
+              title TEXT NOT NULL,
+              completed BOOLEAN DEFAULT FALSE,
+              created_at TIMESTAMP DEFAULT NOW()
+            );
+          "
+
+          echo "=== Migrazione completata con successo. ==="

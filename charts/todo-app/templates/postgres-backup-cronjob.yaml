@@ -1,0 +1,68 @@
+{{- if .Values.backup.cronjob.enabled -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.cronjob.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: postgres-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: postgres-backup
+            image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+            env:
+            - name: PGHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: todo-config
+                  key: DB_HOST
+            - name: PGPORT
+              valueFrom:
+                configMapKeyRef:
+                  name: todo-config
+                  key: DB_PORT
+            - name: PGDATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: todo-config
+                  key: DB_NAME
+            - name: PGUSER
+              valueFrom:
+                configMapKeyRef:
+                  name: todo-config
+                  key: DB_USER
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: password
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -eo pipefail
+              echo "Starting database dump..."
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              pg_dump -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" | gzip > "/backups/backup_${TIMESTAMP}.sql.gz"
+              echo "Database dump completed. Cleaning up backups older than 7 days..."
+              find /backups -type f -name "backup_*.sql.gz" -mtime +7 -delete
+              echo "Cleanup completed successfully."
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backups
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: postgres-backup-pvc
+{{- end }}
