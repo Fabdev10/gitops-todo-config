@@ -5,17 +5,23 @@ metadata:
   labels:
     {{- include "todo-app.labels" . | nindent 4 }}
   annotations:
-    # Helm eseguirà questo Job PRIMA di installare/aggiornare le altre risorse.
-    # Se il Job fallisce, il deploy viene bloccato (rollback automatico in caso di upgrade).
-    "helm.sh/hook": pre-install,pre-upgrade
-    # Un peso negativo garantisce che questo hook parta prima di altri hook allo stesso stadio.
-    "helm.sh/hook-weight": "-5"
-    # Il Job viene eliminato automaticamente dopo il successo (mantiene il cluster pulito).
-    # Usa "hook-failed" per tenerlo in caso di errore e facilitare il debug.
+    # Helm eseguirà questo Job DOPO che tutte le risorse normali (ConfigMap, Secret,
+    # StatefulSet postgres-db) sono state applicate al cluster.
+    # In questo modo il container può leggere envFrom configMapKeyRef/secretKeyRef
+    # senza incorrere nel CreateContainerConfigError del pre-install.
+    # NOTA: post-install/post-upgrade garantisce che i manifest siano stati "applicati",
+    # NON che i pod siano già Ready — il retry pg_isready gestisce questa finestra.
+    "helm.sh/hook": post-install,post-upgrade
+    # Peso positivo: parte dopo altri hook post-* con peso inferiore (es. weight "0").
+    "helm.sh/hook-weight": "5"
+    # Il Job viene eliminato automaticamente dopo il successo.
+    # Sostituisci con "hook-failed,hook-succeeded" per tenerlo anche in caso di errore
+    # e facilitare il debug con: kubectl logs -n <ns> -l app=db-migrate
     "helm.sh/hook-delete-policy": hook-succeeded
 spec:
-  # Il Job viene considerato fallito se non completa entro 120 secondi.
-  activeDeadlineSeconds: 120
+  # Aumentato a 300s: il pod Postgres può richiedere tempo per diventare Ready
+  # dopo un'installazione fresh (download immagine + inizializzazione dati).
+  activeDeadlineSeconds: 300
   template:
     metadata:
       name: "{{ include "todo-app.fullname" . }}-db-migrate"
@@ -59,18 +65,21 @@ spec:
           set -eo pipefail
           echo "=== DB Migration Hook: verifica connessione a $PGHOST:$PGPORT ==="
 
-          # Attendi che il DB sia pronto (max 60 tentativi, 1 secondo ciascuno)
-          RETRIES=60
-          until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" || [ $RETRIES -eq 0 ]; do
+          # Attendi che il DB sia pronto.
+          # max 90 tentativi × 2s = 180s di attesa totale (dentro i 300s del deadline).
+          # pg_isready torna exit 0 solo quando Postgres accetta connessioni TCP;
+          # questo copre sia la fase di avvio del pod sia il caso in cui il pod
+          # sia stato schedulato ma l'init di PostgreSQL non ha ancora finito.
+          RETRIES=90
+          until pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"; do
+            if [ $RETRIES -eq 0 ]; then
+              echo "ERROR: Postgres non raggiungibile dopo il timeout. Aborting migration."
+              exit 1
+            fi
             echo "Waiting for postgres... ($RETRIES tentativi rimasti)"
-            sleep 1
+            sleep 2
             RETRIES=$((RETRIES-1))
           done
-
-          if [ $RETRIES -eq 0 ]; then
-            echo "ERROR: Postgres non raggiungibile. Aborting migration."
-            exit 1
-          fi
 
           echo "=== Postgres raggiungibile. Esecuzione migrazione/verifica schema... ==="
 
